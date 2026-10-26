@@ -1,0 +1,43 @@
+# Codemagic: builds the iPhone app on a cloud Mac (free plan) without an
+# Apple Developer account. The result, KoraVuba-unsigned.ipa, is signed and
+# installed on your own iPhone from Windows with Sideloadly and a free Apple ID.
+workflows:
+  ios-unsigned:
+    name: iPhone app (unsigned IPA for Sideloadly)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Install iOS pods
+        script: |
+          cd ios
+          pod install --repo-update
+      - name: Build the iPhone app (no code signing)
+        script: flutter build ios --release --no-codesign
+      - name: Package as .ipa
+        script: |
+          rm -rf Payload KoraVuba-unsigned.ipa
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry KoraVuba-unsigned.ipa Payload
+    artifacts:
+      - KoraVuba-unsigned.ipa
+
+  android-apk:
+    name: Android APK
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build APK
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk

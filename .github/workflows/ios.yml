@@ -1,0 +1,50 @@
+# Builds an unsigned iPhone app (.ipa) on every push to main (or by hand from
+# the Actions tab) and publishes it on the Releases page. Install it on an
+# iPhone from a PC with Sideloadly + an Apple ID (see INSTALL_ON_IPHONE.md).
+# Free and unlimited on public repositories.
+name: iPhone IPA (unsigned)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build iPhone app (no code signing)
+        run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+
+      - name: Package .ipa
+        run: |
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry KoraVuba-${{ github.run_number }}-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KoraVuba-iphone
+          path: KoraVuba-${{ github.run_number }}-unsigned.ipa
+
+      - name: Publish on the Releases page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-build-${{ github.run_number }}
+          name: KoraVuba iPhone build ${{ github.run_number }}
+          body: |
+            Unsigned iPhone app. Download it on your PC and install it on your iPhone with Sideloadly (see INSTALL_ON_IPHONE.md).
+          files: KoraVuba-${{ github.run_number }}-unsigned.ipa
+          make_latest: false
